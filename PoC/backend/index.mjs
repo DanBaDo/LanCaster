@@ -19,10 +19,21 @@ async function run() {
         return
     };
     const peerId = Date.now().toString();
-    peers.set(peerId,{name, rtcDescription, response: null});
-    console.log(peers);
+    const newPeer = {name, rtcDescription, response: null}
+    peers.set(peerId,newPeer);
     res.status(200);
-    res.json(peerId)
+    res.json(peerId);
+    const message = {
+      type: "newPeer",
+      content: newPeer
+    }
+    peers.forEach(
+      peer => {
+        if ( peer.response ) {
+          peer.response.write(`data: ${JSON.stringify(message)}\n\n`)
+        }
+      }
+    );
   })
 
   app.get('/events/:id', async function(req, res) {
