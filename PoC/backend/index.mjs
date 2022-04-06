@@ -36,6 +36,10 @@ async function run() {
     );
   })
 
+  app.patch('/peer/:id', express.json(), async (req, res)=>{
+    // Provides a way for update peers offers and announce them
+  })
+
   app.get('/events/:id', async function(req, res) {
     // https://masteringjs.io/tutorials/express/server-sent-events
     if ( ! peers.has(req.params.id)) {
