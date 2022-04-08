@@ -1,4 +1,4 @@
-export async function postPeer(jsonBody) {
+export async function postPeer(id, candidate) {
     const response = await fetch(
         "/peer/",
         {
@@ -6,7 +6,7 @@ export async function postPeer(jsonBody) {
                 "Content-Type": "application/json"
             },
             method: "POST",
-            body: jsonBody
+            body: JSON.stringify({ id, candidate })
         }
     )
     return response

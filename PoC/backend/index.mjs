@@ -11,61 +11,55 @@ async function run() {
 
   app.use('/', express.static('public', {index: "index.html"}));
 
-  app.post('/peer/', express.json(), async (req, res)=>{
-    console.log(req.ip);
-    const { name, rtcDescription } = req.body
-    if ( ! name || ! rtcDescription ) { 
-        res.sendStatus(400);
+  app.post('/peer/', express.json(), async (request, response)=>{
+    const { id, candidate } = request.body
+    if ( ! id ) { 
+        response.sendStatus(400);
         return
     };
-    const peerId = Date.now().toString();
-    const newPeer = {name, rtcDescription, response: null}
-    peers.set(peerId,newPeer);
-    res.status(200);
-    res.json(peerId);
-    const message = {
-      type: "newPeer",
-      content: newPeer
-    }
+    const peer = peers.get(id) || {candidates: []}
+    if ( ! Array.isArray(peer.candidates)) peer.candidates = []
+    if ( candidate ) peer.candidates.push(candidate);
+    peers.set(id,peer);
+    const peersKeysArray = Array.from(peers.keys()).filter( key => key !== id )
+    const peersArray = peersKeysArray.map(key => {
+      const peer = peers.get(key)
+      return {id, candidates: peer.candidates}
+    })
+    const json = JSON.stringify(peersArray)
     peers.forEach(
       peer => {
         if ( peer.response ) {
-          peer.response.write(`data: ${JSON.stringify(message)}\n\n`)
+          peer.response.write(`data: { "type": "peers", "content": ${json}}\n\n`)
         }
       }
     );
   })
 
-  app.patch('/peer/:id', express.json(), async (req, res)=>{
+  app.patch('/peer/:id', express.json(), async (request, response)=>{
     // Provides a way for update peers offers and announce them
   })
 
-  app.get('/events/:id', async function(req, res) {
+  app.get('/events/:id', async function(request, response) {
     // https://masteringjs.io/tutorials/express/server-sent-events
-    if ( ! peers.has(req.params.id)) {
-        res.sendStatus(400);
-        return;
-    }
-    res.set({
+    response.set({
       'Cache-Control': 'no-cache',
       'Content-Type': 'text/event-stream',
       'Connection': 'keep-alive'
     });
-    res.flushHeaders();
-    const peer = peers.get(req.params.id)
-    peer.response = res;
-    peers.set(req.params.id, peer)
+    response.flushHeaders();
+    const id = request.params.id
+    const peer = peers.get(id) || {}
+    peers.set(id,{...peer, response });
     request.on("close", ()=>{
-        const peer = peers.get(req.params.id);
-        peer.response = null;
-        peers.set(req.params.id, peer);
+        const peer = peers.get(id);
+        peers.set(id,{ ...peer, response: null});
     })
-
   });
 
   //const index = fs.readFileSync('./index.html', 'utf8');
   //app.get('/', (req, res) => res.send(index));
 
-  await app.listen(3000);
-  console.log('Listening on port 3000');
+  app.listen(3000);
+  console.log('Listening on port http://127.0.0.1:3000');
 }

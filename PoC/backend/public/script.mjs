@@ -1,35 +1,39 @@
-import { postPeer } from "./api.mjs";
+const local = new RTCPeerConnection()
+const remote = new RTCPeerConnection()
 
-const peers = [];
-
-async function sseMessageHandler (ev) {
-    const data = JSON.parse(ev.data);
-    switch (data.type) {
-        case "newPeer":
-            peers.push(data.content);
-            await local.setRemoteDescription(data.content.rtcDescription);
-            await local.createDataChannel('connection');
-            break;
-        default:
-            console.error("Unknown SSE message type:",data)
-            break;
-    }
+function onTrack (ev) {
+     const video = document.querySelector("#remoteVideo")
+     video.addEventListener("loadedmetadata",ev=>console.log("Video metadata"))
+     video.addEventListener("resize",ev=>console.log("Video resize"))
+     video.srcObject = ev.streams[0]
 }
 
-const local = new RTCPeerConnection()
-local.addEventListener("connectionstatechange",ev=>console.log("Connection state changed:", ev))
-const localOffer = await local.createOffer()
-await local.setLocalDescription(localOffer)
-const response = await postPeer(
-    JSON.stringify({
-        name: "Master",
-        rtcDescription: local.localDescription
-    })
-)
-const id = await response.json()
-console.log(id);
+async function onIce (ev, peer) {
+    await peer.addIceCandidate(ev.candidate)
+}
 
-const sse = new EventSource("/events/"+id);
-sse.addEventListener('open', ev=>console.log("SSE ready"));
-sse.addEventListener('message', sseMessageHandler);
-sse.addEventListener("error",err=>console.log("SSE error",err));
+const screenMedia = await navigator.mediaDevices.getDisplayMedia({audio:false, video:{
+    width: { max: 300 },
+    height: { max: 300 }
+  }})
+const tracks = screenMedia.getTracks()
+const track = tracks[0]
+
+const sender = local.addTrack(track, screenMedia)
+
+remote.addEventListener("track", onTrack)
+
+local.addEventListener('icecandidate',  (ev)=>onIce(ev,remote))
+local.addEventListener("iceconnectionstatechange", ev=>console.log(local.iceConnectionState))
+remote.addEventListener('icecandidate', (ev)=>onIce(ev,local))
+local.addEventListener("iceconnectionstatechange", ev=>console.log(remote.iceConnectionState))
+
+const offer = await local.createOffer()
+await local.setLocalDescription(offer)
+await remote.setRemoteDescription(offer)
+
+const answer = await remote.createAnswer()
+await remote.setLocalDescription(answer)
+await local.setRemoteDescription(answer)
+
+
