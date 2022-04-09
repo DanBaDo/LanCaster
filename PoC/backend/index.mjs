@@ -1,6 +1,14 @@
 'use strict';
-
+import {randomBytes} from "crypto"
 import express, { request } from "express" ;
+
+const pin_length = 6;
+const pin = randomBytes((pin_length/4)*3).toString("base64")
+
+console.log('******************************')
+console.log(pin)
+console.log('******************************')
+
 
 run().catch(err => console.log(err));
 
