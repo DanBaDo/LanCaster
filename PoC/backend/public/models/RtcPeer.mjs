@@ -1,9 +1,12 @@
-class ServerPeer {
-    constructor () {
-        this._rtcConnection = new RTCPeerConnection()
-
+class Peer {
+    constructor (signaligClient) {
+        this._signalingClient = signaligClient
     }
-    addStream (track, stream) {
+    _rtcConnection = new RTCPeerConnection()
+}
+
+class ServerPeer extends Peer {
+    constructor (track, stream) {
         this._rtcConnection.addTrack(track, stream)
     }
 }

@@ -1,11 +1,14 @@
-class SignalingClient {
-    constructor (postURL, sseURL) {
-        this._postURL = postURL
-        this._sseURL = sseURL
+import { signals } from "./defines/signalsDefines.mjs"
+
+export class SignalingClient {
+    constructor (URL) {
+        this._URL = URL
+        this._sse = new EventSource(this._URL);
+        this._sse.addEventListener("message", this._messageHandler)
     }
     _post (signal) {
         const response = await fetch(
-            this._postURL,
+            this._URL,
             {
                 headers: {
                     "Content-Type": "application/json"
@@ -15,7 +18,7 @@ class SignalingClient {
             }
         )
     }
-    _s2s (signalType, payload) {
+    _toSignalString (signalType, payload) {
         return {
             type: signalType,
             content: JSON.stringify(payload)
@@ -23,30 +26,36 @@ class SignalingClient {
     }
     post = {
         iceCandidate (iceCandidateObject) {
-            this._post(this._s2s('ICE',iceCandidateObject))
-        },
+            this._post(this._toSignalString(
+                signals.ICE_CANDIDATE,
+                iceCandidateObject
+        ))},
         serviceOffer (offerObject) {
-            this._post(this._s2s('SRV',offerObject))
-        },
+            this._post(this._toSignalString(
+                signals.SERVICE_OFFER,
+                offerObject
+        ))},
         serviceRequest (responseObject) {
-            this._post(this._s2s('REQ',responseObject))
+            this._post(this._toSignalString(
+                signals.SERVICE_REQUEST,
+                responseObject
+        ))}
+    }
+    _messageHandler ( event ) {
+        const message = JSON.parse( event.data);
+        switch (message.type) {
+            case signals.ICE_CANDIDATE:
+                console.log("ICE_CANDIDATE");
+                break;
+            case signals.SERVICE_REQUEST:
+                console.log("SERVICE_REQUEST");
+                break;
+            case signals.SERVICE_OFFER:
+                console.log("SERVICE_OFFER");
+                break;
+            default:
+                console.error("Unknown SSE message type:", message)
+                break;
         }
-
     }
 }
-
-export async function postSignal (id, candidate) {
-    const response = await fetch(
-        "/peer/",
-        {
-            headers: {
-                "Content-Type": "application/json"
-            },
-            method: "POST",
-            body: JSON.stringify({ id, candidate })
-        }
-    )
-    return response
-}
-
-const exports = { SignalingClient }
