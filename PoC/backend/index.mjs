@@ -1,6 +1,7 @@
 'use strict';
 import {randomBytes} from "crypto"
 import express from "express" 
+import cookieParser from "cookie-parser";
 import jwt from "jsonwebtoken"
 
 
@@ -14,8 +15,17 @@ run().catch(err => console.log(err));
 
 const peers = new Map();
 
+function authMiddleware (request, response, next) {
+  if ( request.cookies.jwt && jwt.verify(request.cookies.jwt, secret) ) {
+    response.locals.authorization=jwt.decode(request.cookies.jwt)
+  }
+  next()
+}
+
 async function run() {
   const app = express();
+
+  app.use(cookieParser())
 
   app.use('/', express.static('public', {index: "index.html"}));
 
@@ -59,13 +69,14 @@ async function run() {
     // Provides a way for update peers offers and announce them
   })
 
-  app.get('/signaling/', async function(request, response) {
+  app.get('/signaling/', authMiddleware, async function(request, response) {
     // https://masteringjs.io/tutorials/express/server-sent-events
     response.set({
       'Cache-Control': 'no-cache',
       'Content-Type': 'text/event-stream',
       'Connection': 'keep-alive'
     });
+    //console.log("->",response.locals)
     response.flushHeaders();
     const id = request.params.id
     const peer = peers.get(id) || {}
