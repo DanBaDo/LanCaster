@@ -1,4 +1,4 @@
-import { signals } from "./defines/signalsDefines.mjs"
+import { signals } from "../defines/signalsDefines.mjs"
 
 export class SignalingClient {
     constructor (URL) {
@@ -11,9 +11,11 @@ export class SignalingClient {
             this._URL,
             {
                 headers: {
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/json",
+                    "Cookies": document.cookie
                 },
                 method: "POST",
+                credentials: 'same-origin',
                 body: JSON.stringify(signal)
             }
         )
