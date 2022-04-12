@@ -1,14 +1,14 @@
 'use strict';
 import {randomBytes} from "crypto"
-import express, { request } from "express" ;
+import express from "express" 
+import jwt from "jsonwebtoken"
 
-const pin_length = 6;
-const pin = randomBytes((pin_length/4)*3).toString("base64")
 
-console.log('******************************')
-console.log(pin)
-console.log('******************************')
+const secret = "secret_isimo"
+const otp_length = 24;
+const otp = randomBytes((otp_length/4)*3).toString("base64")
 
+console.log(`Login path: http://127.0.0.1:3000/login/${encodeURIComponent(otp)}`)
 
 run().catch(err => console.log(err));
 
@@ -19,7 +19,18 @@ async function run() {
 
   app.use('/', express.static('public', {index: "index.html"}));
 
-  app.post('/peer/', express.json(), async (request, response)=>{
+  app.get("/login/:otp?", async (request, response) => {
+    if ( request.params.otp === otp ) {
+      response
+        .cookie("jwt",jwt.sign({rol: "teacher"},secret))
+        .redirect(303,'/')
+      return
+    } else {
+      response.sendStatus(401)
+    }
+  });
+
+  app.post('/signaling/', express.json(), async (request, response)=>{
     const { id, candidate } = request.body
     if ( ! id ) { 
         response.sendStatus(400);
@@ -44,11 +55,11 @@ async function run() {
     );
   })
 
-  app.patch('/peer/:id', express.json(), async (request, response)=>{
+  app.patch('/signaling/', express.json(), async (request, response)=>{
     // Provides a way for update peers offers and announce them
   })
 
-  app.get('/events/:id', async function(request, response) {
+  app.get('/signaling/', async function(request, response) {
     // https://masteringjs.io/tutorials/express/server-sent-events
     response.set({
       'Cache-Control': 'no-cache',
@@ -64,9 +75,6 @@ async function run() {
         peers.set(id,{ ...peer, response: null});
     })
   });
-
-  //const index = fs.readFileSync('./index.html', 'utf8');
-  //app.get('/', (req, res) => res.send(index));
 
   app.listen(3000);
   console.log('Listening on port http://127.0.0.1:3000');

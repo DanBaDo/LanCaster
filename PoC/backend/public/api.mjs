@@ -6,7 +6,7 @@ export class SignalingClient {
         this._sse = new EventSource(this._URL);
         this._sse.addEventListener("message", this._messageHandler)
     }
-    _post (signal) {
+    async _post (signal) {
         const response = await fetch(
             this._URL,
             {
