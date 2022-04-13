@@ -1,6 +1,6 @@
-import { SignalingClient } from "./models/signaling.mjs"
-import { ServerPeer, ClientPeer } from "./models/rtcPeer.mjs"
-import { getCookies } from "./aux/cookies.mjs"
+import { SignalingClient } from "/static/models/signaling.mjs"
+import { ServerPeer, ClientPeer } from "/static/models/rtcPeer.mjs"
+import { getCookies } from "/static/aux/cookies.mjs"
 
 const signaling = new SignalingClient("/signaling/")
 

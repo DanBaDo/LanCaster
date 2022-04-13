@@ -1,4 +1,4 @@
-import { signals } from "../defines/signalsDefines.mjs"
+import { signals } from "/static/defines/signalsDefines.mjs"
 
 export class SignalingClient {
     constructor (URL) {

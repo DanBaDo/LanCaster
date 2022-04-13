@@ -15,7 +15,18 @@ run().catch(err => console.log(err));
 
 const peers = new Map();
 
-function authMiddleware (request, response, next) {
+function authenticationMiddleware (request, response, next) {
+  if ( ! response.locals.authorization ) {
+    if ( request.params.otp === otp ) {
+      response.cookie("jwt",jwt.sign({rol: "teacher"},secret))
+    } else {
+      response.cookie("jwt",jwt.sign({rol: "student"},secret))
+    }
+  }
+  next()
+}
+
+function authorizationMiddleware (request, response, next) {
   if ( request.cookies.jwt && jwt.verify(request.cookies.jwt, secret) ) {
     response.locals.authorization=jwt.decode(request.cookies.jwt)
   }
@@ -26,8 +37,6 @@ async function run() {
   const app = express();
 
   app.use(cookieParser())
-
-  app.use('/', express.static('public', {index: "index.html"}));
 
   app.get("/login/:otp?", async (request, response) => {
     if ( request.params.otp === otp ) {
@@ -69,7 +78,7 @@ async function run() {
     // Provides a way for update peers offers and announce them
   })
 
-  app.get('/signaling/', authMiddleware, async function(request, response) {
+  app.get('/signaling/', authorizationMiddleware, async function(request, response) {
     // https://masteringjs.io/tutorials/express/server-sent-events
     response.set({
       'Cache-Control': 'no-cache',
@@ -86,6 +95,9 @@ async function run() {
         peers.set(id,{ ...peer, response: null});
     })
   });
+
+  app.use('/static/', express.static('public/'));
+  app.use('/', authorizationMiddleware, authenticationMiddleware, express.static('public', {index: "index.html"}));
 
   app.listen(3000);
   console.log('Listening on port http://127.0.0.1:3000');
