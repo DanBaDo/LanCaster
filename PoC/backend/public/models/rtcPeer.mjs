@@ -9,21 +9,31 @@ function randomId (length) {
 }
 
 class Peer {
-    constructor () {
+    constructor (signalingClient) {
+        this._signaling = signalingClient
         this.id = sessionStorage.getItem("id")
         if ( ! this.id ) {
             this.id = randomId(24)
-            localStorage.setItem("id", id)
+            localStorage.setItem("id", this.id)
         }
+        this.rtcConnection = new RTCPeerConnection()
     }
-    _rtcConnection = new RTCPeerConnection()
 }
 
 export class ServerPeer extends Peer {
-    constructor (serviceName, track, stream) {
-        super()
-        this.serviceName = serviceName
-        this._rtcConnection.addTrack(track, stream)
+    constructor (signalingClient, stream, trackIdx = 0) {
+        super(signalingClient)
+        this.rtcConnection.addTrack(stream.getTracks()[trackIdx], stream)
+        this.rtcConnection.addEventListener("icecandidate", ev=>this._signaling.postServiceOffer({
+            ice: ev.candidate,
+            offer: this._offer
+        }))
+        this.rtcConnection.createOffer().then(
+            offer => { 
+                this.rtcConnection.setLocalDescription(offer)
+                this._offer = offer
+            }
+        )
     }
 }
 

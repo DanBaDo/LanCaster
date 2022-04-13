@@ -26,23 +26,16 @@ export class SignalingClient {
             content: JSON.stringify(payload)
         }
     }
-    post = {
-        iceCandidate (iceCandidateObject) {
-            this._post(this._toSignalString(
-                signals.ICE_CANDIDATE,
-                iceCandidateObject
-        ))},
-        serviceOffer (offerObject) {
-            this._post(this._toSignalString(
-                signals.SERVICE_OFFER,
-                offerObject
-        ))},
-        serviceRequest (responseObject) {
-            this._post(this._toSignalString(
-                signals.SERVICE_REQUEST,
-                responseObject
-        ))}
-    }
+    postServiceOffer (offerObject) {
+        this._post(this._toSignalString(
+            signals.SERVICE_OFFER,
+            offerObject
+    ))}
+    postServiceRequest (responseObject) {
+        this._post(this._toSignalString(
+            signals.SERVICE_REQUEST,
+            responseObject
+    ))}
     _messageHandler ( event ) {
         const message = JSON.parse( event.data);
         switch (message.type) {

@@ -16,3 +16,13 @@ export function getCookies() {
         }
     }
 }
+
+export function decodeJWT (jwt) {
+    const [ , payload, ] = jwt.split(".")
+    return JSON.parse(window.atob(jwt))
+}
+
+export function decodeAuthData () {
+    const [ , payload, ] = getCookies().valueOf("jwt").split(".")
+    return JSON.parse(window.atob(payload))
+}
