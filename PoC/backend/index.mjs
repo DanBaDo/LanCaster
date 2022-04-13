@@ -50,28 +50,8 @@ async function run() {
   });
 
   app.post('/signaling/', express.json(), async (request, response)=>{
-    const { id, candidate } = request.body
-    if ( ! id ) { 
-        response.sendStatus(400);
-        return
-    };
-    const peer = peers.get(id) || {candidates: []}
-    if ( ! Array.isArray(peer.candidates)) peer.candidates = []
-    if ( candidate ) peer.candidates.push(candidate);
-    peers.set(id,peer);
-    const peersKeysArray = Array.from(peers.keys()).filter( key => key !== id )
-    const peersArray = peersKeysArray.map(key => {
-      const peer = peers.get(key)
-      return {id, candidates: peer.candidates}
-    })
-    const json = JSON.stringify(peersArray)
-    peers.forEach(
-      peer => {
-        if ( peer.response ) {
-          peer.response.write(`data: { "type": "peers", "content": ${json}}\n\n`)
-        }
-      }
-    );
+    console.log(request.body);
+    response.sendStatus(201)
   })
 
   app.patch('/signaling/', express.json(), async (request, response)=>{
