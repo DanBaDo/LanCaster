@@ -1,26 +1,32 @@
 'use strict';
+import path from 'path';
+import {fileURLToPath} from 'url';
 import {randomBytes} from "crypto"
 import express from "express" 
 import cookieParser from "cookie-parser";
 import jwt from "jsonwebtoken"
 
-
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const secret = "secret_isimo"
-const otp_length = 24;
-const otp = randomBytes((otp_length/4)*3).toString("base64")
+const otpLength = 24
+const otp = randomBytes((otpLength/4)*3).toString("base64")
+const clientIdLength = 8
 
-console.log(`Login path: http://127.0.0.1:3000/login/${encodeURIComponent(otp)}`)
+console.log(`Login path: http://127.0.0.1:3000/${encodeURIComponent(otp)}`)
 
 run().catch(err => console.log(err));
 
 const peers = new Map();
 
 function authenticationMiddleware (request, response, next) {
+  // If running is same endpoint that authorizationMiddleware, run authorization first.
   if ( ! response.locals.authorization ) {
+    const id = `${randomBytes((clientIdLength/4)*3).toString("base64")}.${Date.now()}`
     if ( request.params.otp === otp ) {
-      response.cookie("jwt",jwt.sign({rol: "teacher"},secret))
+      response.cookie("jwt",jwt.sign({id, rol: "teacher"},secret))
     } else {
-      response.cookie("jwt",jwt.sign({rol: "student"},secret))
+      response.cookie("jwt",jwt.sign({id, rol: "student"},secret))
     }
   }
   next()
@@ -29,6 +35,7 @@ function authenticationMiddleware (request, response, next) {
 function authorizationMiddleware (request, response, next) {
   if ( request.cookies.jwt && jwt.verify(request.cookies.jwt, secret) ) {
     response.locals.authorization=jwt.decode(request.cookies.jwt)
+    console.log(response.locals.authorization, request.originalUrl);
   }
   next()
 }
@@ -37,17 +44,7 @@ async function run() {
   const app = express();
 
   app.use(cookieParser())
-
-  app.get("/login/:otp?", async (request, response) => {
-    if ( request.params.otp === otp ) {
-      response
-        .cookie("jwt",jwt.sign({rol: "teacher"},secret))
-        .redirect(303,'/')
-      return
-    } else {
-      response.sendStatus(401)
-    }
-  });
+  app.use('/static/', express.static(__dirname+'/public/static/'));
 
   app.post('/signaling/', express.json(), async (request, response)=>{
     console.log(request.body);
@@ -76,8 +73,7 @@ async function run() {
     })
   });
 
-  app.use('/static/', express.static('public/'));
-  app.use('/', authorizationMiddleware, authenticationMiddleware, express.static('public', {index: "index.html"}));
+  app.get('/:otp?', authorizationMiddleware, authenticationMiddleware, express.static(__dirname+'/public/', {index: "index.html"}));
 
   app.listen(3000);
   console.log('Listening on port http://127.0.0.1:3000');
