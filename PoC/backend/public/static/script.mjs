@@ -1,6 +1,6 @@
-import { SignalingClient } from "/static/models/signaling.mjs"
-import { ServerPeer, ClientPeer } from "/static/models/rtcPeer.mjs"
-import { decodeAuthData } from "/static/aux/authentication.mjs"
+import { SignalingClient } from "./models/signaling.mjs"
+import { ServerPeer, ClientPeer } from "./models/rtcPeer.mjs"
+import { decodeAuthData } from "./aux/authentication.mjs"
 
 const signaling = new SignalingClient("/signaling/")
 
