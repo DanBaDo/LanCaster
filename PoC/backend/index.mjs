@@ -46,7 +46,8 @@ async function run() {
   app.use(cookieParser())
   app.use('/static/', express.static(__dirname+'/public/static/'));
 
-  app.post('/signaling/', express.json(), async (request, response)=>{
+  app.post('/signaling/', authorizationMiddleware, express.json(), async (request, response)=>{
+    console.log(response.locals.authorization);
     console.log(request.body);
     response.sendStatus(201)
   })
