@@ -63,8 +63,12 @@ async function run() {
           break
       }
       peers.set(response.locals.authorization.id, peer)
-      console.log(peer);
       response.sendStatus(201)
+      peers.forEach(
+        (peer, id) => { 
+          if (id !== response.locals.authorization.id) peer.response.send("data: ...\n\n")
+        }
+      )
     } else {
       response.sendStatus(401)
     }
@@ -91,7 +95,7 @@ async function run() {
     })
   });
 
-  app.get('/', authorizationMiddleware, express.static(__dirname+'/public/', {index: "index.html"}));
+  app.get('/', authorizationMiddleware, authenticationMiddleware, express.static(__dirname+'/public/', {index: "index.html"}));
   app.use('/static/', express.static(__dirname+'/public/static/'));
 
   app.listen(3000);
