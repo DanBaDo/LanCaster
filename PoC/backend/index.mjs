@@ -2,9 +2,10 @@
 import path from 'path';
 import {fileURLToPath} from 'url';
 import {randomBytes} from "crypto"
-import express from "express" 
+import express, { response } from "express" 
 import cookieParser from "cookie-parser";
 import jwt from "jsonwebtoken"
+import { signals } from './public/static/defines/signalsDefines.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -13,14 +14,14 @@ const otpLength = 24
 const otp = randomBytes((otpLength/4)*3).toString("base64")
 const clientIdLength = 8
 
-console.log(`Login path: http://127.0.0.1:3000/${encodeURIComponent(otp)}`)
+console.log(`Login path: http://127.0.0.1:3000/login/${encodeURIComponent(otp)}`)
 
 run().catch(err => console.log(err));
 
 const peers = new Map();
 
 function authenticationMiddleware (request, response, next) {
-  // If running is same endpoint that authorizationMiddleware, run authorization first.
+  // If running with authorizationMiddleware, run authorization first.
   if ( ! response.locals.authorization ) {
     const id = `${randomBytes((clientIdLength/4)*3).toString("base64")}.${Date.now()}`
     if ( request.params.otp === otp ) {
@@ -35,7 +36,7 @@ function authenticationMiddleware (request, response, next) {
 function authorizationMiddleware (request, response, next) {
   if ( request.cookies.jwt && jwt.verify(request.cookies.jwt, secret) ) {
     response.locals.authorization=jwt.decode(request.cookies.jwt)
-    console.log(response.locals.authorization, request.originalUrl);
+    //console.log(response.locals.authorization, request.originalUrl);
   }
   next()
 }
@@ -44,12 +45,29 @@ async function run() {
   const app = express();
 
   app.use(cookieParser())
-  app.use('/static/', express.static(__dirname+'/public/static/'));
+
+  app.get('/login/:otp?', authenticationMiddleware, (request, response)=>{
+    response.redirect("/")
+  });
 
   app.post('/signaling/', authorizationMiddleware, express.json(), async (request, response)=>{
-    console.log(response.locals.authorization);
-    console.log(request.body);
-    response.sendStatus(201)
+    //console.log(response.locals.authorization);
+    const peer = peers.get(response.locals.authorization.id);
+    if (peer) {
+      switch (request.body.type) {
+        case signals.ICE:
+          peer.candidates.push(request.body.content)
+          break
+        case signals.SERVICE_OFFER:
+          peer.offer = request.body.content
+          break
+      }
+      peers.set(response.locals.authorization.id, peer)
+      console.log(peer);
+      response.sendStatus(201)
+    } else {
+      response.sendStatus(401)
+    }
   })
 
   app.patch('/signaling/', express.json(), async (request, response)=>{
@@ -63,10 +81,9 @@ async function run() {
       'Content-Type': 'text/event-stream',
       'Connection': 'keep-alive'
     });
-    //console.log("->",response.locals)
     response.flushHeaders();
-    const id = request.params.id
-    const peer = peers.get(id) || {}
+    const id = response.locals.authorization.id
+    const peer = peers.get(id) || {candidates: [], offer: null}
     peers.set(id,{...peer, response });
     request.on("close", ()=>{
         const peer = peers.get(id);
@@ -74,7 +91,8 @@ async function run() {
     })
   });
 
-  app.get('/:otp?', authorizationMiddleware, authenticationMiddleware, express.static(__dirname+'/public/', {index: "index.html"}));
+  app.get('/', authorizationMiddleware, express.static(__dirname+'/public/', {index: "index.html"}));
+  app.use('/static/', express.static(__dirname+'/public/static/'));
 
   app.listen(3000);
   console.log('Listening on port http://127.0.0.1:3000');

@@ -1,4 +1,4 @@
-import { signals } from "../defines/signalsDefines.mjs"
+import { signals } from "../defines/signalsDefines.mjs";
 
 export class SignalingClient {
     constructor (URL) {
@@ -23,9 +23,14 @@ export class SignalingClient {
     _toSignalString (signalType, payload) {
         return {
             type: signalType,
-            content: JSON.stringify(payload)
+            content: payload
         }
     }
+    postICE (iceObject) {
+        this._post(this._toSignalString(
+            signals.ICE,
+            iceObject
+    ))}
     postServiceOffer (offerObject) {
         this._post(this._toSignalString(
             signals.SERVICE_OFFER,
