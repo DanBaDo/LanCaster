@@ -2,7 +2,7 @@
 import path from 'path';
 import {fileURLToPath} from 'url';
 import {randomBytes} from "crypto"
-import express, { response } from "express" 
+import express from "express" 
 import cookieParser from "cookie-parser";
 import jwt from "jsonwebtoken"
 import { signals } from './public/static/defines/signalsDefines.mjs';
@@ -56,17 +56,27 @@ async function run() {
     if (peer) {
       switch (request.body.type) {
         case signals.ICE:
-          peer.candidates.push(request.body.content)
+          peer.RTCdata.candidates.push(request.body.content)
           break
         case signals.SERVICE_OFFER:
           peer.offer = request.body.content
           break
       }
       peers.set(response.locals.authorization.id, peer)
+      const currentPeers = JSON.stringify(
+        Array.from(peers.values())
+        .map( item => item.RTCdata )
+      );
       response.sendStatus(201)
       peers.forEach(
         (peer, id) => { 
-          if (id !== response.locals.authorization.id) peer.response.send("data: ...\n\n")
+          if (
+            id !== response.locals.authorization.id
+          &&
+            peer.response
+          ) {
+            peer.response.write(`data: ${currentPeers}\n\n`);
+          }
         }
       )
     } else {
@@ -80,14 +90,16 @@ async function run() {
 
   app.get('/signaling/', authorizationMiddleware, async function(request, response) {
     // https://masteringjs.io/tutorials/express/server-sent-events
-    response.set({
+    response.writeHead(
+      200,
+      {
       'Cache-Control': 'no-cache',
       'Content-Type': 'text/event-stream',
       'Connection': 'keep-alive'
-    });
-    response.flushHeaders();
+      }
+    );
     const id = response.locals.authorization.id
-    const peer = peers.get(id) || {candidates: [], offer: null}
+    const peer = peers.get(id) || { RTCdata:{candidates: [], offer: null} }
     peers.set(id,{...peer, response });
     request.on("close", ()=>{
         const peer = peers.get(id);
