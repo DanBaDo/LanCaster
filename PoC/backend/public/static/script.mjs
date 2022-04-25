@@ -14,7 +14,6 @@ async function shareDesktopHandler () {
         //height: { max: 300 }
         }})    
     services.push( new ServerPeer(signaling, screenMedia) )
-    console.log();
 }
 
 function addControls () {

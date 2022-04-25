@@ -51,7 +51,6 @@ async function run() {
   });
 
   app.post('/signaling/', authorizationMiddleware, express.json(), async (request, response)=>{
-    //console.log(response.locals.authorization);
     const peer = peers.get(response.locals.authorization.id);
     if (peer) {
       switch (request.body.type) {
@@ -59,7 +58,7 @@ async function run() {
           peer.RTCdata.candidates.push(request.body.content)
           break
         case signals.SERVICE_OFFER:
-          peer.offer = request.body.content
+          peer.RTCdata.offer = request.body.content
           break
       }
       peers.set(response.locals.authorization.id, peer)
@@ -69,12 +68,8 @@ async function run() {
       );
       response.sendStatus(201)
       peers.forEach(
-        (peer, id) => { 
-          if (
-            id !== response.locals.authorization.id
-          &&
-            peer.response
-          ) {
+        peer => { 
+          if ( peer.response ) {
             peer.response.write(`data: ${currentPeers}\n\n`);
           }
         }
