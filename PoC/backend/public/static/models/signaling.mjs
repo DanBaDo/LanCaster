@@ -45,13 +45,13 @@ export class SignalingClient {
         const message = JSON.parse( event.data);
         switch (message.type) {
             case signals.ICE_CANDIDATE:
-                console.log("ICE_CANDIDATE");
+                console.log("ICE_CANDIDATE", message);
                 break;
             case signals.SERVICE_REQUEST:
-                console.log("SERVICE_REQUEST");
+                console.log("SERVICE_REQUEST", message);
                 break;
             case signals.SERVICE_OFFER:
-                console.log("SERVICE_OFFER");
+                console.log("SERVICE_OFFER", message);
                 break;
             default:
                 console.error("Unknown SSE message type:", message)
