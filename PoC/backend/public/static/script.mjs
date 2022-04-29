@@ -23,7 +23,7 @@ function addControls () {
 }
 
 function main () {
-    if (authData.roll = "teacher") addControls()
+    if (authData.rol === "teacher") addControls()
 }
 
 main();
