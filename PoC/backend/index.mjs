@@ -20,6 +20,8 @@ run().catch(err => console.log(err));
 
 const peers = new Map();
 
+let sseResponse = null;
+
 function authenticationMiddleware (request, response, next) {
   // If running with authorizationMiddleware, run authorization first.
   if ( ! response.locals.authorization ) {
@@ -51,27 +53,26 @@ async function run() {
   });
 
   app.post('/signaling/', authorizationMiddleware, express.json(), async (request, response)=>{
-    const peer = peers.get(response.locals.authorization.id);
-    if (peer) {
+    const currentClient = peers.get(response.locals.authorization.id);
+    if (currentClient) {
       switch (request.body.type) {
         case signals.ICE:
-          peer.RTCdata.candidates.push(request.body.content)
+          currentClient.RTCdata.candidates.push(request.body.content)
           break
         case signals.SERVICE_OFFER:
-          peer.RTCdata.offer = request.body.content
+          currentClient.RTCdata.offer = request.body.content
           break
       }
-      peers.set(response.locals.authorization.id, peer)
-      const currentPeers = JSON.stringify(
-        Array.from(peers.values())
-        .map( item => item.RTCdata )
-      );
       response.sendStatus(201)
       peers.forEach(
-        peer => { 
-          if ( peer.response ) {
-            peer.response.write(`data: ${currentPeers}\n\n`);
-          }
+        (peer, idx) => { 
+          const otherPeers = [];
+          peers.forEach(
+            (otherPeer, otherIdx) => {
+              if ( idx !== otherIdx ) otherPeers.push(otherPeer.RTCdata)
+            }
+          )
+          peer.response.write(`data: ${JSON.stringify(otherPeers)}\n\n`);
         }
       )
     } else {
@@ -85,6 +86,13 @@ async function run() {
 
   app.get('/signaling/', authorizationMiddleware, async function(request, response) {
     // https://masteringjs.io/tutorials/express/server-sent-events
+    const id = response.locals.authorization.id
+    let peer = peers.get(id)
+    if ( ! peer ) {
+      peer = { RTCdata:{candidates: [], offer: null} }
+      peers.set(id,peer)
+    }
+    peer.response = response
     response.writeHead(
       200,
       {
@@ -93,12 +101,8 @@ async function run() {
       'Connection': 'keep-alive'
       }
     );
-    const id = response.locals.authorization.id
-    const peer = peers.get(id) || { RTCdata:{candidates: [], offer: null} }
-    peers.set(id,{...peer, response });
     request.on("close", ()=>{
-        const peer = peers.get(id);
-        peers.set(id,{ ...peer, response: null});
+        peer.response = null
     })
   });
 
