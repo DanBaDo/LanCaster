@@ -62,6 +62,9 @@ async function run() {
         case signals.SERVICE_OFFER:
           currentClient.RTCdata.offer = request.body.content
           break
+        case signals.SERVICE_RESPONSE:
+          currentClient.RTCdata.response = request.body.content
+          break;
       }
       response.sendStatus(201)
       peers.forEach(
@@ -89,7 +92,7 @@ async function run() {
     const id = response.locals.authorization.id
     let peer = peers.get(id)
     if ( ! peer ) {
-      peer = { RTCdata:{candidates: [], offer: null} }
+      peer = { RTCdata:{ id, candidates: [], offer: null} }
       peers.set(id,peer)
     }
     peer.response = response

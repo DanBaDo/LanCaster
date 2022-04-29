@@ -1,4 +1,10 @@
+import { decodeAuthData } from "../aux/authentication.mjs"
 import { signals } from "../defines/signalsDefines.mjs";
+import { ClientPeer } from "./rtcPeer.mjs";
+import { service } from "../script.mjs";
+
+const authData = decodeAuthData()
+export const peers = new Map()
 
 export class SignalingClient {
     constructor (URL) {
@@ -38,12 +44,28 @@ export class SignalingClient {
     ))}
     postServiceRequest (responseObject) {
         this._post(this._toSignalString(
-            signals.SERVICE_REQUEST,
+            signals.SERVICE_RESPONSE,
             responseObject
     ))}
     _messageHandler ( event ) {
-        const message = JSON.parse( event.data);
-        switch (message.type) {
+        const peersData = JSON.parse( event.data);
+        peersData.forEach(
+            peerData => {
+                console.log(peerData)
+                const { id, candidates, offer, response } = peerData
+                const peer = { candidates, offer, response }
+                peers.set(id, peer)
+                if ( offer && candidates ) peer.client = new ClientPeer(peerData, "remoteVideo")
+                if ( response ) {
+                    candidades.forEach(
+                        item => service.addIceCandidate(item)
+                    )
+                    service.setRemoteDescription(response)
+                }
+            }
+        )
+
+        /*switch (message.type) {
             case signals.ICE_CANDIDATE:
                 console.log("ICE_CANDIDATE", message);
                 break;
@@ -56,6 +78,6 @@ export class SignalingClient {
             default:
                 console.error("Unknown SSE message type:", message)
                 break;
-        }
+        }*/
     }
 }
